@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Resources:
+  PipelineArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+
+  CodePipelineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: codepipeline.amazonaws.com
+          Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+  AppPipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      ArtifactStore:
+        Type: S3
+        Location: !Ref PipelineArtifactsBucket
+      RestartExecutionOnUpdate: true
+      Name: test-pipeline
+      RoleArn: !Ref CodePipelineRole
+      Stages:
+        - Name: Source
+          Actions:
+            - Name: CheckoutGitHubSourceCode
+              ActionTypeId:
+                Category: Source
+                Owner: AWS
+                Version: '1'
+                Provider: CodeStarSourceConnection
+              OutputArtifacts:
+                - Name: 'SourceCode'
+              Configuration:
+                ConnectionArn: "arn:aws:codestar-connections:us-east-2:983510677257:connection/0ec9fc55-b41c-444d-93c7-cef01734e63f"
+                FullRepositoryId: bgagnon93/rock_paper_scissors
+                BranchName: main
+                OutputArtifactFormat: "CODE_ZIP"
+              RunOrder: 1
