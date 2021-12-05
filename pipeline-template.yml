@@ -42,6 +42,17 @@ Resources:
                 Effect: Allow
                 Resource:
                   - "*"
+        - PolicyName: S3-Read-Permissions
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Action:
+                  - "s3:CreateBucket"
+                  - "s3:GetObject"
+                  - "s3:List*"
+                Effect: Allow
+                Resource:
+                  - "*"
       Path: /
       RoleName: !Join
         - '-'
