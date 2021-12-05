@@ -21,6 +21,39 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/AdministratorAccess
 
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+      Path: /
+      RoleName: !Join
+        - '-'
+        - - !Ref 'AWS::StackName'
+          - CodeBuild
+
+  BackendProject:
+    Type: "AWS::CodeBuild::Project"
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Name: codebuild-project
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-x86_64-standard:3.0
+        Type: LINUX_CONTAINER
+      LogsConfig:
+        CloudWatchLogs:
+          Status: ENABLED
+      ServiceRole: !Ref CodeBuildRole
+      Source:
+        BuildSpec: buildspec.yml
+        Type: CODEPIPELINE
+
   AppPipeline:
     Type: AWS::CodePipeline::Pipeline
     Properties:
@@ -29,7 +62,7 @@ Resources:
         Location: !Ref PipelineArtifactsBucket
       RestartExecutionOnUpdate: true
       Name: test-pipeline
-      RoleArn: !Ref CodePipelineRole
+      RoleArn: !GetAtt CodePipelineRole.Arn
       Stages:
         - Name: Source
           Actions:
@@ -46,4 +79,19 @@ Resources:
                 FullRepositoryId: bgagnon93/rock_paper_scissors
                 BranchName: main
                 OutputArtifactFormat: "CODE_ZIP"
+              RunOrder: 1
+        - Name: Build
+          Actions:
+            - Name: CodeBuildAction
+              ActionTypeId:
+                Category: Build
+                Owner: AWS
+                Version: '1'
+                Provider: CodeBuild
+              InputArtifacts:
+                - Name: 'SourceCode'
+              OutputArtifacts:
+                - Name: 'BuildArtifact'
+              Configuration:
+                ProjectName: !Ref BackendProject
               RunOrder: 1
